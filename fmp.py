@@ -16,20 +16,6 @@ DEFAULT_CHUNK_SIZE = 10000
 
 
 class Scanner:
-
-    """def __init__(self, file_path, search_terms=None, bytes_threshold=0):
-        self.file_path = file_path
-        self.search_terms = None
-        if search_terms is not None:
-            self.search_terms = literal_eval(search_terms)
-        self.bytes_threshold = bytes_threshold
-
-    def scan(self):
-        if self.bytes_threshold == 0:
-            self.scan_file_for_hex_patterns(self.file_path, self.search_terms)
-        elif self.bytes_threshold > 0:
-            self.find_repeating_sequences(self.file_path, self.bytes_threshold)"""
-
     @staticmethod
     def scan_file_for_hex_patterns(file_path, search_terms):
         """
@@ -39,7 +25,7 @@ class Scanner:
         :param search_terms: a dictionary that contains all the hex phrases to search in the binary file.
         :return: None.
         """
-        if os.path.isfile(file_path) and isinstance(search_terms, dict):
+        if isinstance(search_terms, dict):
             print("[~] This action may take a few seconds.")
             count_appearances = {}
             for value in search_terms.values():
@@ -72,7 +58,7 @@ class Scanner:
                     previous = chunk[-len(longest_term):]
                 print("[+] Number of matches found:\n", count_appearances)
         else:
-            print("[!] Error: Binary file doesn't exist or the search terms entered are not in a dictionary format.")
+            print("[!] The search terms entered are not in a dictionary format.")
             exit(1)
 
     @staticmethod
@@ -84,70 +70,70 @@ class Scanner:
         :param bytes_threshold: the minimum sequence size to be included in the results.
         :return: None.
         """
-        if os.path.isfile(file_path):
-            print("[~] This action may take a few seconds or minutes (depending on file size and number of results).")
-            results = []
-            with open(file_path, 'rb') as file:
-                repeating_byte = b''
-                start_offset = 0
-                chunk_size = DEFAULT_CHUNK_SIZE
-                if os.path.getsize(file_path) < DEFAULT_CHUNK_SIZE:
-                    # If the file size is smaller than the default chunk size, change the chunk size to the file size.
-                    chunk_size = os.path.getsize(file_path)
-                for chunk in iter(partial(file.read, chunk_size), b''):
-                    file_offset = file.tell()
-                    for i in range(0, len(chunk) - 2, 2):
-                        # Checking if the current three bytes are equal to each other.
-                        # The checks are held in variables for optimization reasons.
-                        three_bytes_check = chunk[i] == chunk[i + 1] == chunk[i + 2]
-                        if repeating_byte != b'' and chunk[i] != chunk[i + 1]:
-                            finish_offset = file_offset - chunk_size + i
-                            if (finish_offset - start_offset) > bytes_threshold:
-                                results.append({'range': (hex(start_offset), hex(finish_offset)),
-                                                'size': finish_offset - start_offset,
-                                                'repeating_byte': hex(repeating_byte)})
-                            repeating_byte = b''
-                        elif three_bytes_check or i == 0 and chunk[0] == repeating_byte:
-                            # If the current three bytes are equal to each other and there is no current repeating byte
-                            # start tracking the sequence.
-                            if repeating_byte == b'':
-                                start_offset = file.tell() - chunk_size + i
-                                repeating_byte = chunk[i]
-            print(results)
-        else:
-            print("[!] Error: Binary file doesn't exist or the search terms entered are not in a list format.")
-            exit(1)
+        print("[~] This action may take a few seconds or minutes (depending on file size and number of results).")
+        results = {"results": []}
+        with open(file_path, 'rb') as file:
+            repeating_byte = b''
+            start_offset = 0
+            chunk_size = DEFAULT_CHUNK_SIZE
+            if os.path.getsize(file_path) < DEFAULT_CHUNK_SIZE:
+                # If the file size is smaller than the default chunk size, change the chunk size to the file size.
+                chunk_size = os.path.getsize(file_path)
+            for chunk in iter(partial(file.read, chunk_size), b''):
+                file_offset = file.tell()
+                for i in range(0, len(chunk) - 2, 2):
+                    # Checking if the current three bytes are equal to each other.
+                    # The checks are held in variables for optimization reasons.
+                    three_bytes_check = chunk[i] == chunk[i + 1] == chunk[i + 2]
+                    if repeating_byte != b'' and chunk[i] != chunk[i + 1]:
+                        finish_offset = file_offset - chunk_size + i
+                        if (finish_offset - start_offset) > bytes_threshold:
+                            results["results"].append({'range': (hex(start_offset), hex(finish_offset)),
+                                                       'size': finish_offset - start_offset,
+                                                       'repeating_byte': hex(repeating_byte)})
+                        repeating_byte = b''
+                    elif three_bytes_check or i == 0 and chunk[0] == repeating_byte:
+                        # If the current three bytes are equal to each other and there is no current repeating byte
+                        # start tracking the sequence.
+                        if repeating_byte == b'':
+                            start_offset = file.tell() - chunk_size + i
+                            repeating_byte = chunk[i]
+        print(results)
 
     @staticmethod
     def search_strings(file_path):
-        if os.path.isfile(file_path):
-            results = {}
-            with open(file_path, "rb") as file:
-                previous = b''
-                chunk_size = DEFAULT_CHUNK_SIZE
-                if os.path.getsize(file_path) < DEFAULT_CHUNK_SIZE:
-                    # If the file size is smaller than the default chunk size, change the chunk size to the file size.
-                    chunk_size = os.path.getsize(file_path)
-                for chunk in iter(partial(file.read, chunk_size), b''):
-                    chunk_with_prev = previous + chunk
-                    # Using regex to extract all the strings from the binary
-                    strings_found = re.findall(b'([a-zA-Z0-9!,/-]{4,})', chunk_with_prev)
-                    for string in strings_found:
-                        if string in results:
-                            results[string] += 1
-                        else:
-                            results[string] = 1
+        """
+        The function searches for all the string in a binary file that are 4 characters and more and counts the
+        number of appearances of every string.
+        :param file_path: represents the file path of the target binary file.
+        :return: None
+        """
+        print("[~] This action may take a few seconds or minutes (depending on file size and number of results).")
+        results = {}
+        with open(file_path, "rb") as file:
+            previous = b''
+            chunk_size = DEFAULT_CHUNK_SIZE
+            if os.path.getsize(file_path) < DEFAULT_CHUNK_SIZE:
+                # If the file size is smaller than the default chunk size, change the chunk size to the file size.
+                chunk_size = os.path.getsize(file_path)
+            for chunk in iter(partial(file.read, chunk_size), b''):
+                chunk_with_prev = previous + chunk
+                # Using regex to extract all the strings from the binary
+                strings_found = re.findall(b'([a-zA-Z0-9!,/-]{4,})', chunk_with_prev)
+                for string in strings_found:
+                    if string in results:
+                        results[string] += 1
+                    else:
+                        results[string] = 1
 
-                    if len(strings_found) > 0:
-                        previous = chunk[-len(strings_found[-1]):]
-            print(results)
-        else:
-            print("[!] Error: Binary file doesn't exist.")
-            exit(1)
+                if len(strings_found) > 0:
+                    previous = chunk[-len(strings_found[-1]):]
+        print(results)
 
 
 def main():
-    if len(sys.argv) < MIN_AMOUNT_OF_ARGS or len(sys.argv) > MAX_AMOUNT_OF_ARGS:
+    if len(sys.argv) < MIN_AMOUNT_OF_ARGS or len(sys.argv) > MAX_AMOUNT_OF_ARGS \
+            or os.path.isfile(sys.argv[FILE_PATH_ARG]) is False:
         print("Usage: fmp.py <binary file path> [map of hex strings or list of regex [-s]] [-r byte_threshold]\n"
               "Enter \"fmp.py -help\" for more information.")
         exit(1)
@@ -167,3 +153,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
