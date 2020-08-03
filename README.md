@@ -7,14 +7,14 @@ The purpose of this script is:
 `fmp.py <binary file path> [map of hex strings or list of regex [-s]] [-r byte_threshold]`
 
 ## Mandatory Arguments
-* Path to a binary file.
+* `<Path to a binary file.>`
 
 ## Optional Arguments (Choose only one)
 * `<a map of hex string>`: Entering a map of hex strings without any flags will start a scan that will search in the binary file for the hex phrases the user entered and will return a list of the offset of the phrases found and the phrases themselves.
 
 **Example:** `python3 fmp.py ./file "{ '5D00008000': 'lzma', '18286F01': 'zImage', '1F8B0800': 'gzip' }"`
 
-* `-s`: Adding the -s flag to the previous argument will search and count all the string in the file that their length is bigger than 4.
+* `-s`: using the `-s` flag argument will search and count all the string in the file that their length is bigger than 4.
 
 **Example:** `python3 fmp.py ./file -s`
 
