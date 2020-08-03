@@ -155,8 +155,7 @@ def main():
     scanner = Scanner()
     if sys.argv[FILE_PATH_ARG] == '-help':
         help()
-    elif len(sys.argv) < MIN_AMOUNT_OF_ARGS or len(sys.argv) > MAX_AMOUNT_OF_ARGS \
-            or os.path.isfile(sys.argv[FILE_PATH_ARG]) is False:
+    elif len(sys.argv) < MIN_AMOUNT_OF_ARGS or len(sys.argv) > MAX_AMOUNT_OF_ARGS or os.path.isfile(sys.argv[FILE_PATH_ARG]) is False:
         usage()
     elif len(sys.argv) == MIN_AMOUNT_OF_ARGS and sys.argv[SECOND_ARG] != '-r' and sys.argv[SECOND_ARG] != '-s':
         try:
