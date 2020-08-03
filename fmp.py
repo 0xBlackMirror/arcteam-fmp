@@ -6,6 +6,7 @@ from functools import partial
 
 FILE_PATH_ARG = 1
 SECOND_ARG = 2
+THIRD_ARG = 3
 BYTE_THRESHOLD_ARG = 3
 
 MIN_AMOUNT_OF_ARGS = 3
@@ -130,25 +131,47 @@ class Scanner:
                     previous = chunk[-len(strings_found[-1]):]
         print(results)
 
+def help():
+    print("Usage: fmp.py <binary file path> [map of hex strings or list of regex [-s]] [-r byte_threshold]\n\n"
+          "Mandatory arguments:\n"
+          "    Path to a binary file.\n\n"
+          "Optional arguments (choose only one):\n\n"
+          "    <a map of hex string>: Entering a map of hex strings without any flags will scan the binary file and\n"
+          "                           count the number of appearances of every hex string in the map and will return\n"
+          "                           a json object with the output.\n"
+          "    Example: python3 fmp.py ./file \"{ '5D00008000': 'lzma', '18286F01': 'zImage', '1F8B0800': 'gzip' }\"\n\n\n"
+          "    <a map of hex string> -s: Adding the -s flag to the previous argument will search and count all the\n"
+          "                              string in the file that their length is bigger than 4.\n"
+          "    Example: python3 fmp.py ./file \"{ '5D00008000': 'lzma', '18286F01': 'zImage', '1F8B0800': 'gzip' }\" -s\n\n\n"
+          "    -r <byte_threshold>: The argument will scan the binary file for all the the repeating bytes sequences\n"
+          "                         and will return a list of dictionaries that will contain the range of every\n"
+          "                         sequence (in hex), the size of the sequence and the repeating byte.\n"
+          "    Example: python3 fmp.py ./file -r 1000")
+
+def usage():
+    print("Usage: fmp.py <binary file path> [map of hex strings or list of regex [-s]] [-r byte_threshold]\n"
+          "Enter \"fmp.py -help\" for more information.")
+    exit(1)
 
 def main():
-    if len(sys.argv) < MIN_AMOUNT_OF_ARGS or len(sys.argv) > MAX_AMOUNT_OF_ARGS \
-            or os.path.isfile(sys.argv[FILE_PATH_ARG]) is False:
-        print("Usage: fmp.py <binary file path> [map of hex strings or list of regex [-s]] [-r byte_threshold]\n"
-              "Enter \"fmp.py -help\" for more information.")
-        exit(1)
-
     scanner = Scanner()
-    if sys.argv[SECOND_ARG] == '-s':
+    if sys.argv[FILE_PATH_ARG] == '-help':
+        help()
+    elif len(sys.argv) < MIN_AMOUNT_OF_ARGS or len(sys.argv) > MAX_AMOUNT_OF_ARGS \
+            or os.path.isfile(sys.argv[FILE_PATH_ARG]) is False:
+        usage()
+    elif sys.argv[THIRD_ARG] == '-s':
         scanner.search_strings(sys.argv[FILE_PATH_ARG])
     elif sys.argv[SECOND_ARG] == '-r' and sys.argv[BYTE_THRESHOLD_ARG].isdigit() > 0:
         scanner.find_repeating_sequences(sys.argv[FILE_PATH_ARG], int(sys.argv[BYTE_THRESHOLD_ARG]))
-    else:
+    elif sys.argv[SECOND_ARG] != '-r' and sys.argv[THIRD_ARG] != '-s' and  len(sys.argv) == MIN_AMOUNT_OF_ARGS:
         try:
             scanner.scan_file_for_hex_patterns(sys.argv[FILE_PATH_ARG], literal_eval(sys.argv[SECOND_ARG]))
-        except SyntaxError:
+        except SyntaxError or ValueError:
             print("[!] Error: the search terms entered are not in a correct dictionary format.")
             exit(1)
+    else:
+        usage()
 
 
 if __name__ == "__main__":
