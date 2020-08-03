@@ -21,17 +21,14 @@ class Scanner:
     def scan_file_for_hex_patterns(file_path, search_terms):
         """
         The function scans a binary file for hex phrases that the user entered as an argument to the script
-        and prints a dictionary that stores the number of appearances of every phrase in the file.
+        and prints a dictionary with a list that contains the offset of every phrase found and the phrase itself.
         :param file_path: represents the file path of the target binary file.
         :param search_terms: a dictionary that contains all the hex phrases to search in the binary file.
         :return: None.
         """
         if isinstance(search_terms, dict):
             print("[~] This action may take a few seconds.")
-            count_appearances = {}
-            for value in search_terms.values():
-                if value not in count_appearances:
-                    count_appearances.update({value: 0})
+            results = {"results": []}
 
             with open(file_path, 'rb') as file:
                 previous = b''
@@ -41,23 +38,24 @@ class Scanner:
                     # If the file size is smaller than the default chunk size, change the chunk size to the file size.
                     chunk_size = os.path.getsize(file_path)
                 for chunk in iter(partial(file.read, chunk_size), b''):
+                    file_position = file.tell()
                     for term in search_terms:
                         chunk_with_prev = previous + chunk
-                        if 0 < len(term) < len(previous):
+                        bytes_term = bytearray.fromhex(term)
+                        term_len = len(bytes_term)
+                        if 0 < term_len < len(previous):
                             # Creating a chunk that contains the end bytes of the previous chunk so the script
                             # won't miss phrases between chunks
-                            chunk_with_prev = chunk_with_prev[int(len(term) / 2):]
-                        try:
-                            phrase_count_in_chunk = chunk_with_prev.count(bytearray.fromhex(term))
-                            if phrase_count_in_chunk > 0:
-                                count_appearances[search_terms.get(term)] += phrase_count_in_chunk
-                        except ValueError:
-                            print("[!] Error: At least one of the search patterns is not represented as a correct "
-                                  "hexadecimal value.")
-                            file.close()
-                            exit(1)
+                            chunk_with_prev = chunk_with_prev[int(term_len / 2):]
+                        if bytes_term in chunk_with_prev:
+                            findings_indexes = [i for i in range(len(chunk_with_prev)) if
+                                                chunk_with_prev.startswith(bytes_term, i)]
+                            for index in findings_indexes:
+                                start_offset = file_position - len(chunk_with_prev) + index
+                                results["results"].append({"range": (hex(start_offset), hex(start_offset + term_len)) ,
+                                                           "phrase": search_terms[term]})
                     previous = chunk[-len(longest_term):]
-                print("[+] Number of matches found:\n", count_appearances)
+                print("[+] Number of matches found:\n", results)
         else:
             print("[!] The search terms entered are not in a dictionary format.")
             exit(1)
@@ -71,7 +69,7 @@ class Scanner:
         :param bytes_threshold: the minimum sequence size to be included in the results.
         :return: None.
         """
-        print("[~] This action may take a few seconds or minutes (depending on file size and number of results).")
+        print("[~] This action may take a few seconds or minutes (depending on the file size and the number of results).")
         results = {"results": []}
         with open(file_path, 'rb') as file:
             repeating_byte = b''
@@ -140,9 +138,9 @@ def help():
           "                           count the number of appearances of every hex string in the map and will return\n"
           "                           a json object with the output.\n"
           "    Example: python3 fmp.py ./file \"{ '5D00008000': 'lzma', '18286F01': 'zImage', '1F8B0800': 'gzip' }\"\n\n\n"
-          "    <a map of hex string> -s: Adding the -s flag to the previous argument will search and count all the\n"
+          "    -s: Adding the -s flag to the previous argument will search and count all the\n"
           "                              string in the file that their length is bigger than 4.\n"
-          "    Example: python3 fmp.py ./file \"{ '5D00008000': 'lzma', '18286F01': 'zImage', '1F8B0800': 'gzip' }\" -s\n\n\n"
+          "    Example: python3 fmp.py ./file  -s\n\n\n"
           "    -r <byte_threshold>: The argument will scan the binary file for all the the repeating bytes sequences\n"
           "                         and will return a list of dictionaries that will contain the range of every\n"
           "                         sequence (in hex), the size of the sequence and the repeating byte.\n"
@@ -160,16 +158,16 @@ def main():
     elif len(sys.argv) < MIN_AMOUNT_OF_ARGS or len(sys.argv) > MAX_AMOUNT_OF_ARGS \
             or os.path.isfile(sys.argv[FILE_PATH_ARG]) is False:
         usage()
-    elif sys.argv[THIRD_ARG] == '-s':
-        scanner.search_strings(sys.argv[FILE_PATH_ARG])
-    elif sys.argv[SECOND_ARG] == '-r' and sys.argv[BYTE_THRESHOLD_ARG].isdigit() > 0:
-        scanner.find_repeating_sequences(sys.argv[FILE_PATH_ARG], int(sys.argv[BYTE_THRESHOLD_ARG]))
-    elif sys.argv[SECOND_ARG] != '-r' and sys.argv[THIRD_ARG] != '-s' and  len(sys.argv) == MIN_AMOUNT_OF_ARGS:
+    elif len(sys.argv) == MIN_AMOUNT_OF_ARGS and sys.argv[SECOND_ARG] != '-r' and sys.argv[SECOND_ARG] != '-s':
         try:
             scanner.scan_file_for_hex_patterns(sys.argv[FILE_PATH_ARG], literal_eval(sys.argv[SECOND_ARG]))
         except SyntaxError or ValueError:
             print("[!] Error: the search terms entered are not in a correct dictionary format.")
             exit(1)
+    elif len(sys.argv) == 3 and sys.argv[SECOND_ARG] == '-s':
+        scanner.search_strings(sys.argv[FILE_PATH_ARG])
+    elif len(sys.argv) == 4 and sys.argv[SECOND_ARG] == '-r' and sys.argv[BYTE_THRESHOLD_ARG].isdigit() > 0:
+        scanner.find_repeating_sequences(sys.argv[FILE_PATH_ARG], int(sys.argv[BYTE_THRESHOLD_ARG]))
     else:
         usage()
 
